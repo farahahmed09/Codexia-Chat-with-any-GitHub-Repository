@@ -9,7 +9,9 @@ from config import HUGGINGFACE_API_TOKEN
 class ConversationalQASystem:
     def __init__(self, vector_store, file_list):
         self.client = InferenceClient(
-            model="HuggingFaceH4/zephyr-7b-beta",
+            #model="HuggingFaceH4/zephyr-7b-beta",very bad response
+            #model="meta-llama/Llama-3.1-8B-Instruct",
+            model="mistralai/Mistral-7B-Instruct-v0.2",
             token=HUGGINGFACE_API_TOKEN
         )
         self.retriever = vector_store.as_retriever(search_kwargs={"k": 2})
