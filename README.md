@@ -96,43 +96,51 @@ Once the setup is complete, run the following command in your terminal:
 streamlit run app.py
 
 
-🪲 Troubleshooting Journey: From Errors to Success
+## 🪲 Troubleshooting Journey: From Errors to Success
 This project went through a significant debugging process to achieve a stable and high-quality result. Here’s a summary of the key challenges and their solutions:
 
-Challenge: Dependency & Environment Errors
+***
 
-Issue: Initial ModuleNotFoundError errors occurred frequently.
+### Challenge: Dependency & Environment Errors
 
-Solution: The root cause was either forgetting to activate the virtual environment (venv\Scripts\activate) or a missing package. We fixed this by ensuring the venv was always active and by installing missing dependencies like langchain-community and langchain-huggingface and updating requirements.txt.
+**Issue:** Initial `ModuleNotFoundError` errors occurred frequently.
 
-Challenge: Unreliable Hugging Face Free Tier API
+**Solution:** The root cause was either forgetting to activate the virtual environment (`venv\Scripts\activate`) or a missing package. We fixed this by ensuring the `venv` was always active and by installing missing dependencies like `langchain-community` and `langchain-huggingface` and updating `requirements.txt`.
 
-Issue: We repeatedly encountered a ValueError stating that a model was not supported for the text-generation task by various backend providers (like cerebras, nebius, featherless-ai). This was the most persistent issue.
+***
 
-Troubleshooting: We tried several powerful models (Mixtral, Gemma, Llama 3.1, Zephyr), but the API backend would often route them to a provider that only supported the conversational task, causing a crash.
+### Challenge: Unreliable Hugging Face Free Tier API
 
-Solution: We abandoned the standard LangChain LLM wrappers and built a custom class that calls the Hugging Face InferenceClient directly using the .chat_completion() method. This ensured our requests were always sent in the correct format, finally resolving the API incompatibility.
+**Issue:** We repeatedly encountered a `ValueError` stating that a model was not supported for the `text-generation` task by various backend providers (like `cerebras`, `nebius`, `featherless-ai`). This was the most persistent issue.
 
-Challenge: The 403 Forbidden Permissions Error
+**Troubleshooting:** We tried several powerful models (`Mixtral`, `Gemma`, `Llama 3.1`, `Zephyr`), but the API backend would often route them to a provider that only supported the `conversational` task, causing a crash.
 
-Issue: Even with the correct code, the API returned a 403 Forbidden error.
+**Solution:** We abandoned the standard LangChain LLM wrappers and built a custom class that calls the Hugging Face `InferenceClient` directly using the `.chat_completion()` method. This ensured our requests were always sent in the correct format, finally resolving the API incompatibility.
 
-Solution: This was not a code issue but a permissions problem with the Hugging Face account. The fix involved two steps on the HF website:
+***
 
-Accepting the license agreement for the gated model (Llama 3.1).
+### Challenge: The 403 Forbidden Permissions Error
 
-Generating a new API token with "write" permissions.
+**Issue:** Even with the correct code, the API returned a `403 Forbidden` error.
 
-Challenge: Poor Quality & Hallucinated AI Responses
+**Solution:** This was not a code issue but a permissions problem with the Hugging Face account. The fix involved two steps on the HF website:
+1.  Accepting the license agreement for the gated model (`Llama 3.1`).
+2.  Generating a new API token with **"write"** permissions.
 
-Issue: The AI's answers were often repetitive, poorly formatted, or completely wrong (e.g., hallucinating file names).
+***
 
-Troubleshooting: This required several rounds of prompt engineering.
+### Challenge: Poor Quality & Hallucinated AI Responses
 
-Solution: We implemented a final, robust "Few-Shot" prompt. By showing the AI a perfect example of a question and a well-structured answer, we gave it a clear template to follow. This, combined with switching to the more capable meta-llama/Llama-3.1-8B-Instruct model, eliminated the repetition and hallucinations, resulting in high-quality, professional answers.
+**Issue:** The AI's answers were often repetitive, poorly formatted, or completely wrong (e.g., hallucinating file names).
 
-Challenge: Windows-Specific Errors
+**Troubleshooting:** This required several rounds of prompt engineering.
 
-Issue: We encountered a WinError 32 (file in use) and a path error when the project was on a different drive than the temporary folder.
+**Solution:** We implemented a final, robust **"Few-Shot"** prompt. By showing the AI a perfect example of a question and a well-structured answer, we gave it a clear template to follow. This, combined with switching to the more capable `meta-llama/Llama-3.1-8B-Instruct` model, eliminated the repetition and hallucinations, resulting in high-quality, professional answers.
 
-Solution: We fixed the WinError 32 by refactoring the loader.py script to manually manage the temporary directory with a try...finally block and shutil. We fixed the cross-drive path error by replacing os.path.relpath with a more robust string manipulation method.
+***
+
+### Challenge: Windows-Specific Errors
+
+**Issue:** We encountered a `WinError 32` (file in use) and a path error when the project was on a different drive than the temporary folder.
+
+**Solution:** We fixed the `WinError 32` by refactoring the `loader.py` script to manually manage the temporary directory with a `try...finally` block and `shutil`. We fixed the cross-drive path error by replacing `os.path.relpath` with a more robust string manipulation method.
