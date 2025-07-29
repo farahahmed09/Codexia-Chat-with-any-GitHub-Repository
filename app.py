@@ -1,8 +1,10 @@
 import streamlit as st
+from sympy import python
 from codexia_engine.loader import load_and_split_repo
 from codexia_engine.vector_store import create_vector_store
 from codexia_engine.qa_handler import create_qa_chain
 import os
+import re
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -54,26 +56,19 @@ st.markdown("""
     }
 
     /* Chat Input Fix */
-    /* Remove all styling from the main container */
     div[data-testid="stChatInput"] {
         background-color: transparent !important;
         border: none !important;
     }
-
-    /* Style the inner div that Streamlit wraps the textarea in */
     div[data-testid="stChatInput"] > div:first-child {
         background-color: #262730 !important;
         border: 1px solid grey !important;
         border-radius: 10px !important;
     }
-
-    /* On focus, change the border of that inner div and kill the shadow */
     div[data-testid="stChatInput"] > div:first-child:focus-within {
         border-color: white !important;
         box-shadow: none !important;
     }
-
-    /* Ensure the textarea itself has no background or border */
     div[data-testid="stChatInput"] textarea {
         background-color: transparent !important;
         border: none !important;
@@ -90,6 +85,39 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+# --- Helper Function to Render Response ---
+def render_response(response):
+    """
+    Parses the AI response and renders text with markdown and code with st.code.
+    """
+    # Regex to find code blocks (e.g., 
+
+    code_pattern = r"```(\w*)\n(.*?)```"
+
+    
+    # Find all code blocks and split the response text by them
+    parts = re.split(code_pattern, response, flags=re.DOTALL)
+    
+    # The parts list will be like [text, lang, code, text, lang, code, ...]
+    for i in range(len(parts)):
+        part = parts[i]
+        if not part:
+            continue
+        
+        # Check if the part is a language specifier (from the regex capture group)
+        if i % 3 == 1:
+            lang = part
+            code = parts[i+1]
+            st.code(code, language=lang or "plaintext")
+        # Check if the part is a code block
+        elif i % 3 == 2:
+            # This part is code, which we've already handled with its language, so skip
+            continue
+        # Otherwise, it's plain text
+        else:
+            st.markdown(part)
 
 
 # --- Session State Initialization ---
@@ -118,7 +146,16 @@ if st.session_state.show_welcome:
         st.rerun()
 else:
     # --- Main Application Screen ---
-    st.header("Codexia: Chat with any GitHub Repository 💬")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.header("Codexia: Chat with any GitHub Repository 💬")
+    with col2:
+        # "Clear Chat" button is placed here
+        if st.session_state.qa_chain:
+            if st.button("Clear Chat History"):
+                st.session_state.chat_history = []
+                st.rerun()
+
 
     st.write("Enter a public GitHub Repository URL to begin:")
 
@@ -147,23 +184,31 @@ else:
 
     # --- Chat Interface ---
     if st.session_state.qa_chain:
+        # Display previous chat messages
         for message in st.session_state.chat_history:
             avatar_icon = "👤" if message["role"] == "user" else "🤖"
             with st.chat_message(message["role"], avatar=avatar_icon):
                 name = "You" if message["role"] == "user" else "Codexia"
                 st.markdown(f'<div class="chat-name">{name}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div>{message["content"]}</div>', unsafe_allow_html=True)
+                # Use the helper function to render the response
+                render_response(message["content"])
 
+        # Handle new user input
         if user_question := st.chat_input("Your question..."):
+            # Add user message to history and display it
             st.session_state.chat_history.append({"role": "user", "content": user_question})
             with st.chat_message("user", avatar="👤"):
                 st.markdown(f'<div class="chat-name">You</div>', unsafe_allow_html=True)
-                st.markdown(f'<div>{user_question}</div>', unsafe_allow_html=True)
+                render_response(user_question)
 
-            with st.spinner("Thinking..."):
-                result = st.session_state.qa_chain.invoke({"question": user_question})
-                ai_response = result["answer"]
-                st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
-                with st.chat_message("assistant", avatar="🤖"):
-                    st.markdown(f'<div class="chat-name">Codexia</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div>{ai_response}</div>', unsafe_allow_html=True)
+            # Get and display AI response
+            with st.chat_message("assistant", avatar="🧠"):
+                st.markdown(f'<div class="chat-name">Codexia</div>', unsafe_allow_html=True)
+                with st.spinner("Thinking..."):
+                    result = st.session_state.qa_chain.invoke({"question": user_question})
+                    ai_response = result.get("answer", "Sorry, I could not find an answer.")
+                    # Use the helper function to render the AI response
+                    render_response(ai_response)
+
+            # Add the complete AI response to the chat history
+            st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
