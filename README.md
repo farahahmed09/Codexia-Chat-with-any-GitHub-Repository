@@ -113,8 +113,8 @@ Follow these steps to set up and run the project on your local machine.
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
-    cd codexia
+    git clone https://github.com/farahahmed09/Codexia-Chat-with-any-GitHub-Repository
+    cd Codexia-Chat-with-any-GitHub-Repository
     ```
 
 2.  **Create and activate a virtual environment:**
